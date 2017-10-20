@@ -14,19 +14,26 @@ import javax.persistence.Id;
 import java.util.Set;
 import java.util.EnumSet;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.validation.constraints.NotNull;
 
 /**
+ * Entity representing an agent of the secret service.
  *
  * @author tomco
  */
 @Entity
-public class Agent implements Serializable {
+@Table (name = "agent")
+public class Agent {
 
-    private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -35,29 +42,66 @@ public class Agent implements Serializable {
     @Column(nullable = false, unique = true)
     private String codename;
 
-    @Enumerated
-    @NotNull
-    @Column(nullable = false)
+    /**
+     * Set of training the agent is proficient in. This training needs to be
+     * reapplied after a certain amount of time in order to be positive it is
+     * still usable by the agent.
+     */
+    @ElementCollection(fetch = FetchType.LAZY, targetClass = Training.class)
+    @JoinTable(
+            name = "agent_training",
+            joinColumns = {
+                @JoinColumn(name = "agent_id")}
+    )
+    @Column(name = "training_id")
+    @Enumerated(EnumType.STRING)
     private final Set<Training> training = EnumSet.noneOf(Training.class);
 
-    @Enumerated
-    @NotNull
-    @Column(nullable = false)
+    /**
+     * Set of languages the agent is fluent in. The agent needs to test this
+     * fluency after a certain amount of time to ensure his capabilities.
+     */
+    @ElementCollection(fetch = FetchType.LAZY, targetClass = Language.class)
+    @JoinTable(
+            name = "agent_spoken_languages",
+            joinColumns = {
+                @JoinColumn(name = "agent_id")}
+    )
+    @Column(name = "spoken_languages_id")
+    @Enumerated(EnumType.STRING)
     private final Set<Language> spokenLanguages = EnumSet.noneOf(Language.class);
 
-    @Enumerated
-    @NotNull
-    @Column(nullable = false)
+    /**
+     * Set of weapons the agent can use during his mission. The agent needs to
+     * pass a certain amount of psychological profile in order to be permitted
+     * to use these.
+     */
+    @ElementCollection(fetch = FetchType.LAZY, targetClass = Weapon.class)
+    @JoinTable(
+            name = "agent_weapons",
+            joinColumns = {
+                @JoinColumn(name = "agent_id")}
+    )
+    @Column(name = "weapons_id")
+    @Enumerated(EnumType.STRING)
     private final Set<Weapon> weaponSkills = EnumSet.noneOf(Weapon.class);
 
-    @Enumerated
+    /**
+     * A fixed amount of salary range the agent receives in addition to his
+     * regular income. It is set to basic by default.
+     */
+    @Enumerated(EnumType.STRING)
     @NotNull
     @Column(nullable = false)
-    private PayGrade payGrade;
+    private PayGrade payGrade = PayGrade.BASIC;
 
+    /**
+     * An indicator of whether the agent is currently available to be signed to
+     * a mission. It is set as active by default.
+     */
     @NotNull
     @Column(nullable = false)
-    private Boolean isActive;
+    private Boolean isActive = Boolean.TRUE;
 
     @Temporal(TemporalType.DATE)
     @NotNull
@@ -91,6 +135,17 @@ public class Agent implements Serializable {
         this.training.add(training);
     }
 
+    /**
+     * @throws IllegalArgumentException upon trying to remove a training not in
+     * the set
+     */
+    public void removeTraining(Training training) {
+        if (!this.training.remove(training)) {
+            throw new IllegalArgumentException("Cannot remove " + training
+                    + ". Agent " + this.codename + " is not profficient in it.");
+        }
+    }
+
     public Set<Language> getSpokenLanguages() {
         return Collections.unmodifiableSet(spokenLanguages);
     }
@@ -99,12 +154,34 @@ public class Agent implements Serializable {
         this.spokenLanguages.add(spokenLanguage);
     }
 
+    /**
+     * @throws IllegalArgumentException upon trying to remove a language not in
+     * the set
+     */
+    public void removeSpokenLanguages(Language spokenLanguage) {
+        if (this.spokenLanguages.remove(spokenLanguage)) {
+            throw new IllegalArgumentException("Cannot remove " + spokenLanguage
+                    + ". Agent " + this.codename + " is not fluent in it.");
+        }
+    }
+
     public Set<Weapon> getWeaponSkills() {
         return Collections.unmodifiableSet(weaponSkills);
     }
 
     public void addWeaponSkills(Weapon weaponSkill) {
         this.weaponSkills.add(weaponSkill);
+    }
+
+    /**
+     * @throws IllegalArgumentException upon trying to remove a weapon not in
+     * the set
+     */
+    public void removeWeaponSkills(Weapon weaponSkill) {
+        if (this.weaponSkills.remove(weaponSkill)) {
+            throw new IllegalArgumentException("Cannot remove " + weaponSkill
+                    + " skill. Agent " + this.codename + " is not profficient in it.");
+        }
     }
 
     public PayGrade getPayGrade() {
@@ -168,7 +245,7 @@ public class Agent implements Serializable {
 
     @Override
     public String toString() {
-        return "cz.fi.muni.pa165.secretservice.entity.Agent[ id=" + id + ", codename=" + codename+" ]";
+        return "cz.fi.muni.pa165.secretservice.entity.Agent[ id=" + id + ", codename=" + codename + " ]";
     }
 
 }
