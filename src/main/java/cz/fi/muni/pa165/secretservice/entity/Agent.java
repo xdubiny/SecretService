@@ -18,7 +18,6 @@ import java.util.Set;
  * @author tomco
  */
 @Entity
-@Table(name = "agent")
 public class Agent {
 
     @Id
@@ -40,6 +39,7 @@ public class Agent {
             joinColumns = {
                     @JoinColumn(name = "agent_id")}
     )
+
     @Column(name = "training_id")
     @Enumerated(EnumType.STRING)
     private final Set<Training> training = EnumSet.noneOf(Training.class);
@@ -90,12 +90,10 @@ public class Agent {
     @Column(nullable = false)
     private Boolean isActive = Boolean.TRUE;
 
-    @Temporal(TemporalType.DATE)
     @NotNull
     @Column(nullable = false)
     private java.time.LocalDate joined;
 
-    @Temporal(TemporalType.DATE)
     private java.time.LocalDate leftAgency;
 
     public Long getId() {
